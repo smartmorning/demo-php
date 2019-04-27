@@ -1,11 +1,13 @@
 <?php
+    define ("DATA_FILE", "smartmorning.json");
+
     $action = isset($_GET['action']) ? $_GET['action'] : NULL; //gets action type
     switch ($action) {
         case 'set':
-            setTime(getValues(), readData());
+            setAlarm(getValues(), readData());
             break;
         case 'get':
-            getTime(readData());
+            getAlarm(readData());
             break;
         case 'next':
             getNext(readData());
@@ -30,17 +32,16 @@
     }
 
     function readData() {
-        $file = "timestamps.json"; 
         $sorted_timestamp_array = array();
         
         // If there is not yet a data file, return an empty array 
-        if (!file_exists($file)) {
+        if (!file_exists(DATA_FILE)) {
             return array();
         }
 
-        $timestamp_json = file_get_contents($file);
+        $timestamp_json = file_get_contents(DATA_FILE);
         if ($timestamp_json === FALSE) {
-            throw new Exception("Cannot access " . $file . " to read contents.");
+            throw new Exception("Cannot access " . DATA_FILE . " to read contents.");
         }
             
         
@@ -63,7 +64,7 @@
         return $output;
     }
 
-    function setTime($values, $timestamp_array) {
+    function setAlarm($values, $timestamp_array) {
         $current_timestamp = time(); //gets current time
         $new_timestamp_array = []; //the array in which the filter data will be stored to
         $sum = $values->hour + $values->minute + $values->day + $values->month + $values->year; //adding the Date time to check for null later..
@@ -80,25 +81,20 @@
                 $new_timestamp_array[$key] = $value;
             }
         }
-        if (file_put_contents("timestamps.json", json_encode($new_timestamp_array))) {
+        if (file_put_contents(DATA_FILE, json_encode($new_timestamp_array))) {
             echo json_encode($new_timestamp_array);
         } else
-            print '{"result": "error", "message": "Error while writing file timestamps.json"}';
+            print '{"result": "error", "message": "Error while writing file '.DATA_FILE.'"}';
         ;
     }
 
-    function getTime($timestamp_array) {
+    function getAlarm($timestamp_array) {
         $output = new stdClass();
         $output->result = 'ok';
         $output->alarms = array();
         
         foreach ($timestamp_array as $person => $alarm_timestamp) {
-            $alarm = new stdClass();
-            $alarm->person = $person;
-            $alarm->alarm = $alarm_timestamp;
-            $alarm->alarm_iso = strftime("%Y-%m-%d %H:%M:%S", $alarm_timestamp);
-
-            $output->alarms[] = $alarm;
+            $output->alarms[] = formatAlarm($person, $alarm_timestamp);
         }
         print json_encode($output);
     }
